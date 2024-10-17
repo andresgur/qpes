@@ -6,4 +6,4 @@ The model is based on the kinematic model proposed to explain the periodic varia
 
 We couple that equation with the outputs from GRMHD simulations:
 
-![Alt text](plots/mdot_laws.pdf)
+![](plots/mdot_laws.pdf)
