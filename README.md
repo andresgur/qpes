@@ -5,7 +5,7 @@ Fitting the lightcurves of quasi-periodic eruptions (QPEs) with a precession mod
 
 The model is based on the kinematic model proposed to explain the periodic variations observed in the infamous high-mass X-ray binary SS433 ([Abel & Margon 1977](https://ui.adsabs.harvard.edu/abs/1979Natur.279..701A)):
 
-$    \cos \alpha (t) = \cos \Delta i \cos i + \sin \Delta i \sin i \cos \{2 \pi [(t-t_\mathrm{0}) / P + \phi]\}$
+$\cos \alpha (t) = \cos \Delta i \cos i + \sin \Delta i \sin i \cos \{2 \pi \[(t-t_\mathrm{0}) / P + \phi\]\}$
 
 where $\alpha (t)$ is the instantaneous angle of the cone. We couple that equation with the outputs from GRMHD simulations, which derived the Eddington luminosity (in the 0.3 $-$ 10 keV band) as a function of observer's inclination ($i$):
 
