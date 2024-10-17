@@ -15,7 +15,7 @@ from shutil import copyfile
 home = os.getenv("HOME")
 
 if os.path.isfile(f"{home}/.config/matplotlib/stylelib/paper.mplstyle"):
-    plt.style.use("{home}/.config/matplotlib/stylelib/paper.mplstyle")
+    plt.style.use(f"{home}/.config/matplotlib/stylelib/paper.mplstyle")
 
 mdots = np.array([2, 7, 12, 24])
 
@@ -81,7 +81,7 @@ def harm_model(params, times, rescale=True): # mdot=2,
 
     # if i>90, we see the undercone
     #i_t = np.where(i_t > 90, i_t - 90, i_t)
-    i_t_undercone = np.abs(180 - np.abs(i_t))
+    i_t_undercone = np.abs(np.pi - np.abs(i_t))
 
     flux_i = get_mdot_file(mdot)
 
@@ -122,7 +122,7 @@ if __name__=="__main__":
     ap.add_argument("-c", "--cores", nargs="?", default=12, help="Number of cores", type=int)
     ap.add_argument("-o", "--outdir", nargs="?", default="", help="Output dir", type=str)
     ap.add_argument("-p", "--period", nargs="?", default=None, help="Start period guess in seconds", type=float)
-    ap.add_argument("--freeze", action="store_true")
+    ap.add_argument("--converge", action="store_false", help="Whether to stop the chains when converge is reached")
     ap.add_argument("--max_n", nargs="?", default=50000, help="Maximum number of samples for the chains", type=int)
     ap.add_argument("--tmin", nargs="?", default=0, help="Minimum time to truncate the lightcurve", type=float)
     ap.add_argument("--tmax", nargs="?", default=np.inf, help="Maximum time to truncate the lightcurve", type=float)
@@ -197,15 +197,11 @@ if __name__=="__main__":
 
     bounds = [phase_bounds, incl_bounds, dincl_bounds, mdot_bounds, a_bounds]
 
-    par_names = [r"$\phi$", r"$i_\mathrm{0}$", r"$\Delta i$", r"$\dot{m}$", "$A$"]  # ,"$\\dot{m}$",
-    if not args.freeze:
-        freeze = False
-        initial_params = [starting_period] + initial_params
-        par_names = ["$P$"] + par_names
-        parambounds = np.array([period_bounds]  + bounds)
-    else:
-        freeze = True
-        parambounds = np.array(bounds)
+    par_names = [r"$\phi$", r"$i_\mathrm{0}$", r"$\Delta i$", r"$\dot{m}$", "$A$"]
+
+    initial_params = [starting_period] + initial_params
+    par_names = ["$P$"] + par_names
+    parambounds = np.array([period_bounds]  + bounds)
 
     print("Initial parameters:\n---------------")
     print(initial_params)
@@ -267,7 +263,7 @@ if __name__=="__main__":
         with Pool(cores) as pool:
             sampler = emcee.EnsembleSampler(nwalkers, ndim, neg_chi_square,
                                             pool=pool, args=(rate, err, times, parambounds),)
-            if True:
+            if args.converge:
                 for sample in sampler.sample(initial_samples, iterations=MAX_N, progress=False):
                     # Only check convergence every 100 steps
                     if sampler.iteration % every_samples:
