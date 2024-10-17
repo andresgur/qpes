@@ -4,6 +4,8 @@ The model is based on the kinematic model proposed to explain the periodic varia
 
 ![Equation 61](https://latex.codecogs.com/svg.latex?E%20=%20mc^2)
 
-We couple that equation with the outputs from GRMHD simulations:
+We couple that equation with the outputs from GRMHD simulations, which derived the Eddington luminosity (in the 0.3 $-$ 10 keV band) as a function of observer's inclination ($i$):
 
-![](plots/mdot_laws.pdf)
+![](plots/mdot_laws.png)
+
+Only four values of $\dot{m}$ were calculated, as shown.
