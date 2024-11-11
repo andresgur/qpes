@@ -192,7 +192,7 @@ if __name__=="__main__":
 
     a_bounds = (0.00001, 2)# in Edd units np.mean(rate) + np.std(rate)*2)]
 
-    initial_params = [0.3, 75., 10., 2, np.median(rate)]# np.mean(rate)] 0.5, 70, 35,  10 ]#np.mean(rate)]
+    initial_params = [0.3, 70., 50., 2, np.median(rate)]# np.mean(rate)] 0.5, 70, 35,  10 ]#np.mean(rate)]
 
 
     bounds = [phase_bounds, incl_bounds, dincl_bounds, mdot_bounds, a_bounds]
@@ -300,11 +300,10 @@ if __name__=="__main__":
 
         if not converged:
             warnings.warn("The chains did not converge!")
-            # tau will be very large here, so let's reduce the numbers
-            thin = int(mean_tau / 2)
-            discard = int(mean_tau) * 5 # avoid blowing up if discard is larger than the number of samples, this happens if the fit has not converged
-            if discard > MAX_N:
-                discard = int(mean_tau * 2.5)
+            # default values
+            thin = 1
+            discard = 0
+
         else:
             discard = int(mean_tau * 5)
             if discard > MAX_N:
@@ -336,7 +335,6 @@ if __name__=="__main__":
         chain_fig.savefig("%s/chain_samples.png" % outdir, bbox_inches="tight",
                           dpi=100)
         plt.close(chain_fig)
-
         print("Discarding the first %d samples" % discard)
         # calculate R stat
         samples = sampler.get_chain(discard=discard)
@@ -345,15 +343,15 @@ if __name__=="__main__":
 
         samples = sampler.get_chain(flat=True, discard=discard)
         between_chain_variances = np.var(samples, axis=0)
-
         print("R-stat (values close to 1 indicate convergence)")
         print(whithin_chain_variances / between_chain_variances[np.newaxis, :]) # https://stackoverflow.com/questions/7140738/numpy-divide-along-axis
+        
         samples = None # free memory
 
         final_samples = sampler.get_chain(discard=discard, thin=thin, flat=True)
         loglikes = sampler.get_log_prob(discard=discard, thin=thin, flat=True)
         # save samples
-        print("Storing thinned samples...")
+        print("Storing samples...")
         outputs = np.vstack((final_samples.T, loglikes))
 
         header_samples = "\t".join(par_names) + "\tloglikehood"
