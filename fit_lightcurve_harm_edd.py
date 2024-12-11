@@ -7,23 +7,15 @@ import argparse
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
 import os,warnings, time
-from math import sin, cos, exp
+from math import exp
 import corner
 from datetime import datetime
 from shutil import copyfile
-
+from model import harm_model_rebinned, harm_model, FILE, mdots
 home = os.getenv("HOME")
 
 if os.path.isfile(f"{home}/.config/matplotlib/stylelib/paper.mplstyle"):
     plt.style.use(f"{home}/.config/matplotlib/stylelib/paper.mplstyle")
-
-mdots = np.array([2, 7, 12, 24])
-
-PATH_TO_SIMUS = f"{home}/Documents/papers/qpes/simulations_output"
-
-FILE = f"{PATH_TO_SIMUS}/Lx_Mdot"
-
-mdot_files = [np.genfromtxt(FILE + "%d.txt" % mdot, names=["i_rad", "flux"]) for mdot in mdots]
 
 #mdot = mdots[0]
 #flux_i = mdot_files[0]
@@ -33,88 +25,28 @@ mdot_files = [np.genfromtxt(FILE + "%d.txt" % mdot, names=["i_rad", "flux"]) for
 # read the flux vs i file
 #flux_i = np.genfromtxt(FILE, names=["i_rad", "flux"])
 
-TO_RAD = np.pi / 180
-two_pi = 2 * np.pi
-
-def get_mdot_file(input_mdot):
-    """Casts input mdot into one of the available mdot values and retrieves the corresponding values"""
-    return mdot_files[np.argmin(np.abs(input_mdot - mdots))]
-
-def harm_model(params, times, rescale=True): # mdot=2, 
-    """Construct precessing model here
-    inputparams
-    params[0]:period
-    params[1]:phi (phase)
-    params[2]:i_0
-    params[3]: di
-    params[4]: A
-
-    """
-    period, phase_0, incl, dincl, mdot, A = params  # mdot
-
-    incl_rad = incl * TO_RAD
-    dincl_rad = dincl * TO_RAD
-
-    if incl < 0.0:
-        raise ValueError("Incl must be positively defined! (i = %.2f)" % incl)
-
-    # calculate the phase
-    phase = two_pi * (phase_0 + times / period)
-    ##wrapped_phase = phase % (2 * np.pi) # between 0 and 2pi --> No need as numpy handles that correctly
-    # CONE
-    # calculate cos i based on Eq 61 from Abolmasov+2009
-    cosi = cos(dincl_rad) * cos(incl_rad) \
-                + sin(dincl_rad) * sin(incl_rad) * np.cos(phase)
-
-    
-    i_t = np.arccos(cosi)
-    # if your object is far from i ~0 then you can comment this out for speed
-    if (incl - dincl) < 0.0 and incl!=0 and rescale:
-        min_i = incl - dincl
-        max_i = incl + dincl
-
-        scaling_factor = (max_i - min_i) / (np.max(i_t) - np.min(i_t))
-
-        #print("Scaling factor: %.2f" % scaling_factor)
-        i_t = scaling_factor * (i_t - np.min(i_t)) + min_i
-    #print(i_t_undercone[np.argmin(i_t_undercone)], i_t_undercone[np.argmax(i_t_undercone)])
-
-    # if i>90, we see the undercone
-    #i_t = np.where(i_t > 90, i_t - 90, i_t)
-    i_t_undercone = np.abs(np.pi - np.abs(i_t))
-
-    flux_i = get_mdot_file(mdot)
-
-    #flux_i = np.genfromtxt(FILE + "%d.txt" % casted_mdot, names=["i_rad", "flux"])
-    #i_t_undercone = np.where(i_t_undercone > 90, i_t_undercone - 90, i_t_undercone)
-    # find the fluxes at the calculate inclinations
-    #i_file = np.searchsorted(flux_i["i_rad"], i_t) - 1
-    #model_rates =  flux_i["flux"][i_file]#np.interp(np.abs(i_t), flux_i["i_rad"], flux_i["flux"])
-    model_rates = np.interp(np.abs(i_t), flux_i["i_rad"], flux_i["flux"])
-    #i_angles = [np.argmin(np.abs(i - flux_i["i_rad"])) for i in np.abs(i_t)]
-    #model_rates = flux_i["flux"][i_angles]
-    #i_file_undercone = np.searchsorted(flux_i["i_rad"], i_t_undercone) - 1
-    #undercone =  flux_i["flux"][i_file_undercone]
-    undercone = np.interp(np.abs(i_t_undercone), flux_i["i_rad"], flux_i["flux"])
-    #i_angles = [np.argmin(np.abs(i - flux_i["i_rad"])) for i in np.abs(i_t_undercone)]
-    #undercone = flux_i["flux"][i_angles]
-    return model_rates + A + undercone
+def chi_square(params, data, errors):
+    model = harm_model(params, finer_times)
+    #rebinned_model = np.empty(len(data))
+    rebinned_model = np.array([np.mean(model[mask]) for mask in masks if np.any(mask)])
+    #for start, end in zip(bin_starts, bin_ends):
+     #   mask = (finer_times >= start) & (finer_times <= end)  # Points in the current bin
+      #  if np.any(mask):  # If there are points in this bin
+       #     rebinned_model.append(np.mean(model[mask]))
+    return np.sum(((data- rebinned_model) / errors)**2)
 
 
-def chi_square(params, data, errors, times):
-    model = harm_model(params, times)
-    return np.sum( ( (data-model) / errors)**2)
-
-
-def neg_chi_square(params, data, errors, times, parambounds):
+def neg_chi_square(params, data, errors, parambounds):
 
     if not np.all(np.logical_and(parambounds[:, 0] <= params, params <= parambounds[:, 1])):
         return -np.inf
     # if the inclination + di is above 180 it flips around
     elif params[2] + params[3] > 180:
         return -np.inf
-    return -chi_square(params, data, errors, times)
+    return -chi_square(params, data, errors)
 
+
+np.random.seed(100)
 
 if __name__=="__main__":
     ap = argparse.ArgumentParser(description='Fit a lightcurve using the output of HARM simulations and the precession model of SS433')
@@ -146,9 +78,13 @@ if __name__=="__main__":
     # copy mdot files
     [copyfile(FILE + "%d.txt" % mdot, f"{outdir}/" + os.path.basename(FILE + "%d.txt" % mdot)) for mdot in mdots]
 
+    dt = lightcurve[1].header["TIMEDEL"]
+
     err = lightcurve[1].data["ERROR"]
 
     rate = lightcurve[1].data["RATE"]
+
+    dt = lightcurve[1].header["TIMEDEL"]
 
     nans = np.isnan(err)
     good_points = (~nans) & (err!=0) & (rate > 0)
@@ -175,6 +111,14 @@ if __name__=="__main__":
 
     dt = lightcurve[1].header["TIMEDEL"]
 
+    bin_starts = times - dt / 2
+    bin_ends = times + dt / 2
+    rebin_factor = 50
+    finer_times = np.linspace(times.min(), times.max(), len(times) * rebin_factor)
+    masks = [(finer_times >= start) & (finer_times <= end) for start, end in zip(bin_starts, bin_ends)]
+    #for start, end in zip(bin_starts, bin_ends):
+     #   mask = (finer_times >= start) & (finer_times <= end)
+
     if args.period:
         starting_period = args.period
         period_bounds = (starting_period * 0.95, starting_period * 1.05)
@@ -194,7 +138,6 @@ if __name__=="__main__":
 
     initial_params = [0.3, 70., 50., 2, np.median(rate)]# np.mean(rate)] 0.5, 70, 35,  10 ]#np.mean(rate)]
 
-
     bounds = [phase_bounds, incl_bounds, dincl_bounds, mdot_bounds, a_bounds]
 
     par_names = [r"$\phi$", r"$i_\mathrm{0}$", r"$\Delta i$", r"$\dot{m}$", "$A$"]
@@ -207,7 +150,7 @@ if __name__=="__main__":
     print(initial_params)
 
     solution = minimize(chi_square, initial_params, method="L-BFGS-B",
-                        bounds=parambounds, args=(rate, err, times))
+                        bounds=parambounds, args=(rate, err))
     print(solution)
     print("Solved in %d iterations" % solution.nit)
     np.savetxt("%s/parameter_fit.dat" % outdir, np.array([np.append(solution.x, solution.fun)]),
@@ -215,9 +158,9 @@ if __name__=="__main__":
     
     model_samples = datapoints * 200 if datapoints > 1000 else 6000
 
-    model_time = np.linspace(times[0], times[-1], model_samples)
+    model_time = times # np.linspace(times[0], times[-1], model_samples)
 
-    best_model = harm_model(solution.x, model_time)# * np.mean(rate)
+    best_model = harm_model_rebinned(solution.x, model_time, dt)# * np.mean(rate)
 
     print("Best-fit params:")
     print(solution.x)
@@ -255,16 +198,16 @@ if __name__=="__main__":
                     accepted = True
 
         autocorr = []
-        every_samples = 1000
+        every_samples = 500
         old_tau = np.inf
         print("Initial chain samples")
         print(initial_samples.T)
         start = time.time()
         with Pool(cores) as pool:
             sampler = emcee.EnsembleSampler(nwalkers, ndim, neg_chi_square,
-                                            pool=pool, args=(rate, err, times, parambounds),)
+                                            pool=pool, args=(rate, err, parambounds),)
             if args.converge:
-                for sample in sampler.sample(initial_samples, iterations=MAX_N, progress=False):
+                for sample in sampler.sample(initial_samples, iterations=MAX_N, progress=True):
                     # Only check convergence every 100 steps
                     if sampler.iteration % every_samples:
                         continue
@@ -302,7 +245,8 @@ if __name__=="__main__":
             warnings.warn("The chains did not converge!")
             # default values
             thin = 1
-            discard = 0
+            # let's get rid of the first 20% samples
+            discard = int(MAX_N * 0.2)
 
         else:
             discard = int(mean_tau * 5)
@@ -330,6 +274,7 @@ if __name__=="__main__":
             ax.set_ylabel(parname.replace("kernel:", "").replace("log_", ""))
             ax.axhline(y=median)
             ax.axvline(discard * nwalkers, ls="--", color="red")
+            ax.ticklabel_format(useOffset=False)
 
         axes[-1].set_xlabel("Step Number")
         chain_fig.savefig("%s/chain_samples.png" % outdir, bbox_inches="tight",
@@ -401,14 +346,14 @@ if __name__=="__main__":
         plt.close(corner_fig)
 
         print("Plotting samples...")
-        n_samples = 1500
+        n_samples = 3000
         models = np.ones((n_samples, len(model_time)))
 
         fig, ax = plt.subplots(figsize=(12.6, 9.8))
         ax.errorbar(times, rate, yerr=err, color="black",
                     ls="solid", fmt=".", ecolor="gray", capsize=2.5)
         for index, sample in enumerate(final_samples[np.random.randint(len(final_samples), size=n_samples)]):
-            models[index] = harm_model(sample, model_time)
+            models[index] = harm_model_rebinned(sample, model_time, dt)
             ax.plot(model_time, models[index], alpha=0.5, color="C1")
         plt.xlabel("Time (s)")
         plt.ylabel("L (Edd)")
@@ -429,13 +374,13 @@ if __name__=="__main__":
         params_max_loglikehood = final_samples[best_loglikehood]
 
 
-        best_model = harm_model(params_max_loglikehood, times)
+        best_model = harm_model_rebinned(params_max_loglikehood, times, dt)
         res = (rate - best_model)
         res_ax.errorbar(times/ 1000, res, yerr=err, color="black", ecolor="gray", capsize=2.5)
         res_ax.axhline(0, color="C1", ls="--")
         plt.xlabel("Time (ks)")
         plt.ylabel("Data - Model", labelpad=-3)
-        fig.savefig("%s/mcmc_mean.png" % (outdir), bbox_inches="tight")
+        fig.savefig("%s/mcmc_mean.png" % (outdir), bbox_inches="tight", dpi=100)
         plt.close(fig)
         max_params_string = ["%.*f" % (decimals, param) for param in params_max_loglikehood]
         outstring = "\t".join(max_params_string)
@@ -443,6 +388,18 @@ if __name__=="__main__":
         out_file = open("%s/parameter_max.dat" % (outdir), "w+")
         out_file.write("%s\n%s" % (header, outstring))
         out_file.close()
+
+        fig, ax = plt.subplots(1)
+        ax.errorbar(times / 1000, rate, yerr=err, color="black",
+                          ls="solid", fmt=".", ecolor="gray", capsize=2.5)
+        # model
+        plt.plot(times / 1000, best_model, color="C1", lw=2, ls="solid")
+        best_model = harm_model_rebinned(params_max_loglikehood, model_time, dt)
+        plt.plot(model_time / 1000, best_model, color="C2", lw=2, ls="--", alpha=0.5)
+        plt.xlabel("Time (ks)")
+        plt.ylabel("$L$ (Edd)")
+        plt.savefig("%s/mcmc_max.png" % outdir, bbox_inches="tight", dpi=100) 
+
 
     print("Took %.3f minutes for %d samples on %d cores" % (time_taken, sampler.iteration, cores))
     print("Outputs stored to %s" % outdir)
