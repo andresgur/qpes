@@ -7,7 +7,7 @@ The model is based on the kinematic model proposed to explain the periodic varia
 
 $\cos \i (t) = \cos \Theta i \cos i_0 + \sin \Theta i \sin i_0 \cos \{2 \pi \[(t-t_\mathrm{0}) / P + \phi\]\}$
 
-where $\i (t)$ is the instantaneous angle of the cone, $\phi = $\omega t$ is the phase. For other definitions, here's a schematic of the model:
+where $\i (t)$ is the instantaneous angle of the cone, $\phi = \omega t$ is the phase. For other definitions, here's a schematic of the model:
 
 ![](plots/cartoon.png)
 
