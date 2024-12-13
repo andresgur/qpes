@@ -6,7 +6,6 @@
 @Author  :   Andrés Gúrpide Lasheras
 @Contact :   a.gurpide-lasheras@soton.ac.uk
 '''
-
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -108,7 +107,7 @@ for dincl in args.dincl:
 
 
     rate, underate, angles, angles_down, phase_t = harm_model(times, period=period, phase_0=phase_0, incl=incl,
-                         dincl=dincl, rescale=False)
+                         dincl=dincl)
     print("Cone peak luminosity (Edd):%.3f" % np.max(rate + underate))
 
     fig, axes = plt.subplots(2,1, figsize=(16, 8), sharex=True, gridspec_kw={"hspace":0})
