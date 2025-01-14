@@ -34,5 +34,24 @@ The script ```fit_lightcurve_harm_edd.py``` basically couples the model above an
 
 Use the option -h to see all the available options for the scripts. 
 
-# Acknowledgments
-There will be a paper out... soon.
+# Acknowledging
+
+If these scripts were useful to you in any way, we would greatly appreciate if you could cite the original paper for which these scripts were developed.
+       
+```
+@ARTICLE{2025arXiv250106185M,
+       author = {{Middleton}, M. and {Gurpide}, A. and {Kwan}, T.~M. and {Dai}, L. and {Arcodia}, R. and {Chakraborty}, J. and {Dauser}, T. and {Fragile}, P.~C. and {Ingram}, A. and {Miniutti}, G. and {Pinto}, C. and {Kosec}, P.},
+        title = "{QPEs as Lense-Thirring precession of super-Eddington flows}",
+      journal = {arXiv e-prints},
+     keywords = {Astrophysics - High Energy Astrophysical Phenomena},
+         year = 2025,
+        month = jan,
+          eid = {arXiv:2501.06185},
+        pages = {arXiv:2501.06185},
+archivePrefix = {arXiv},
+       eprint = {2501.06185},
+ primaryClass = {astro-ph.HE},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2025arXiv250106185M},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+```
